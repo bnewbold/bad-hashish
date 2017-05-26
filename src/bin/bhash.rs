@@ -16,7 +16,7 @@ extern crate crypto;
 use clap::App;
 use bad_hashish::Result;
 use std::path::Path;
-use std::io::{self, BufReader};
+use std::io::BufReader;
 use std::io::prelude::*;
 use std::fs::File;
 use flate2::read::GzDecoder;
@@ -38,24 +38,28 @@ fn run() -> Result<()> {
         println!("{} ({})", f, tree_magic::from_filepath(path));
 
         if tree_magic::match_filepath("application/zip", path) {
-            println!("It's a zip.");
+            //println!("It's a zip.");
         } else if tree_magic::match_filepath("application/gzip", path) {
-            println!("It's gzip.");
+            //println!("It's gzip.");
             let f = File::open(path)?;
-            let mut gz = GzDecoder::new(f)?;
+            let gz = GzDecoder::new(f)?;
 
             let mut reader = BufReader::with_capacity(4*1024*1024, gz);
             let is_tar: bool = {
                 let buf = reader.fill_buf()?;
-                println!("Inside is: {}", tree_magic::from_u8(&buf));
+                //println!("Inside is: {}", tree_magic::from_u8(&buf));
                 tree_magic::match_u8("application/x-tar", &buf)
             };
 
             if is_tar {
-                println!("It's a tar inside");
+                //println!("It's a tar inside");
                 let mut a = Archive::new(reader);
                 for inner in a.entries().unwrap() {
                     let mut inner = inner.unwrap();
+                    // Only do actual files ("regular", not directories, fifo, etc)
+                    if inner.header().entry_type() != tar::EntryType::Regular {
+                        continue;
+                    }
                     let mut hasher = Sha1::new();
                     let mut buf: [u8; 1*1024*1024] = [0; 1*1024*1024];
                     loop {
@@ -63,7 +67,9 @@ fn run() -> Result<()> {
                         if got <= 0 { break };
                         hasher.input(&buf[0..got]);
                     }
-                    println!("\t{} {:?}", hasher.result_str(), inner.header().path().unwrap());
+                    println!("{}  {}",
+                             hasher.result_str(),
+                             inner.header().path()?.to_str().unwrap());
                 }
             }
         }
