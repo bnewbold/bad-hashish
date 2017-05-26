@@ -8,12 +8,15 @@ extern crate log;
 #[macro_use]
 extern crate error_chain;
 
+extern crate zip;
+
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
     error_chain! {
         foreign_links {
             Io(::std::io::Error);
+            Zip(::zip::result::ZipError);
         }
     }
 }
